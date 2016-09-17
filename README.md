@@ -1,2 +1,7 @@
-# sopa
-SoPa - SoPI Parser
+#SoPa - SoPI Parser
+
+## Requiere
+[matplotlib](http://matplotlib.org/)
+[lxml](http://lxml.de/)
+
+
