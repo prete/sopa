@@ -1,6 +1,9 @@
 from lxml import etree
 import numpy as np
 import matplotlib.pyplot as plt
+import os.path
+import getopt
+import sys
 
 class banda(object):
     def __init__(self):
@@ -168,3 +171,90 @@ def parse_histogramas(resultado):
                 for fila in histograma[1:]:
                     histogramas_resultado[banda][float(fila[0].text)] = float(fila[1].text)
     return sorted(histogramas_resultado)
+	
+def usage():
+   print("SOPA - SoPI Parser")
+   print("Herramientas de Python3 para el procesamiento de reportes de SoPI")
+   print("")
+   print("uso: sopa.py -r reporte-htm -s landsat8")
+   print("")
+   print("		-s/--sensor:	especifica qué sensor se utilizó para generar el reporte.")
+   print("						ejemplo: sopa.py -r reporte.htm -s landsat8")
+   print("		-l/--lambdas:	especifica las longitudes de onda de las bandas del sensor.")
+   print("						ejemplo: sopa.py -r reporte.html -l landsat8 482,561,655,864,1608,2200")
+   print("")
+	
+def lambdasSensor(sensor):
+   lambdas = {"landsat8": [482, 561, 655, 864, 1608, 2200], "spot5": [545, 645, 840, 1665]}
+   return lambdas[sensor]
+	
+if __name__ == "__main__":
+   if not len(sys.argv[1:]):
+      usage()
+      exit(0)
+
+    # leo las opciones de la linea de comandos
+   try:
+      opts, args = getopt.getopt(sys.argv[1:],"hr:b:s:l:p:s:", ["help","reporte","sensor","lambdas","bandas","proceso","salida"])
+   except getopt.GetoptError as err:
+      print(str(err))
+      usage()
+      exit(0)
+
+   for o,a in opts:
+      #Muestro el help de la herramienta
+      if o in ("-h","--help"):
+          usage()
+          exit(0)
+      
+	  #Verifico que la ruta del archivo del reporte sea válida
+      elif o in ("-r","--reporte"):
+         ruta_reporte = a
+         try:	  
+            if not os.path.isfile(ruta_reporte):
+               print('No se pudo cargar el reporte. Verifique la ruta del archivo.')
+               exit(0)
+         except NameError:
+            print('No se especificó la ruta del reporte.')
+            exit(0)
+		 
+      #Si se especificó el sensor, busco las longitudes de onda para sus bandas.
+      elif o in ("-s","--sensor"):
+         sensor = a
+         try:	  
+            print('Procesando para sensor: ', sensor)
+            lambdas = lambdasSensor(sensor)
+         except NameError:
+            print('No se especificó el sensor.')
+            print('Ejemplo para Landsat 8: landsat8')
+            exit(0)
+         except KeyError:
+            print('El sensor ' , sensor , ' no existe en la base de datos. Pruebe especificar los lamdas manualmente con la opción -l/--lambdas') 
+            print('Ejemplo para Landsat 8: landsat8')
+            exit(0)
+			
+      #Si se especificaron las longitudes de onda manualmente
+      elif o in ("-l","--lambdas"):
+         lambdas = a
+         try:
+            lambdas = [ int(x) for x in lambdas.split(',') ]
+         except NameError:
+            print('No se especificaron las longitudes de ondas a utilizar.')
+            print('Ejemplo para landsat8: 482,561,655,864,1608,2200')
+            exit(0)
+         except ValueError:
+            print('Formato incorrecto de longitudes de onda.')
+            print('Ejemplo para landsat8: 482,561,655,864,1608,2200')
+            exit(0)
+			
+	  #Si se especificaron las bandas a procesar
+      elif o in ("-b","--bandas"):
+         bandas = a
+		
+      else:
+          assert False,"Unhandled Option"
+   
+   with open(ruta_reporte) as archivo:
+      contenido = archivo.read()
+      reportes = procesar(contenido)
+      reportes.plot_medias(lambdas, "Longitud de londa [nm]", "Relectancia [Arb.]", "Firmas espectrales")
