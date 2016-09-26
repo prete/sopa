@@ -1,0 +1,65 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+    <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>Reporte | SOPA - SoPI Parser</title>
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-default navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Navegación</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">SOPA</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="/">Inicio</a></li>
+            <li class="active"><a href="#">Reporte</a></li>
+          </ul>
+        </div>
+        <!--/.nav-collapse -->
+      </div>
+    </nav>
+    <!--/.navbar-->
+    
+    <div class="container-fluid">      
+	<ul>   
+	% for reporte in reportes:
+		<%import json%>
+		<li>{{json.dumps(reporte)}}</li>
+        % end
+	</ul>   
+       <div class="row">
+            <div class="col-md-12">
+                <div id="line-bar-chart"></div>
+            </div>   
+       </div>
+      <!--/.row-->
+
+    </div>
+   <!-- /.container-fluid -->
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>    
+    <script src="/static/bootstrap/js/bootstrap.min.js"></script>
+    <script src="/static/plotly/js/plotly.min.js"></script>
+    <script>
+        Plotly.d3.json('/plotly', function(err, response){       
+            console.log(response)
+            Plotly.newPlot('line-bar-chart', response.data, response.layout);
+        });
+    </script>
+  </body>
+</html>
