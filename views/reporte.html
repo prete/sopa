@@ -35,31 +35,22 @@
     </nav>
     <!--/.navbar-->
     
-    <div class="container-fluid">      
-	<ul>   
-	% for reporte in reportes:
-		<%import json%>
-		<li>{{json.dumps(reporte)}}</li>
-        % end
-	</ul>   
-       <div class="row">
+    <div class="container">      
+	   <div class="row">
             <div class="col-md-12">
-                <div id="line-bar-chart"></div>
+                <h1>Firmas Espectrales</h1>
+                <div id="firmas-espectrales-line-bar-chart"></div>
             </div>   
        </div>
       <!--/.row-->
-
     </div>
-   <!-- /.container-fluid -->
+   <!-- /.container -->
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>    
+    <script src="/static/jquery/1.12.4/jquery.min.js"></script>    
     <script src="/static/bootstrap/js/bootstrap.min.js"></script>
     <script src="/static/plotly/js/plotly.min.js"></script>
     <script>
-        Plotly.d3.json('/plotly', function(err, response){       
-            console.log(response)
-            Plotly.newPlot('line-bar-chart', response.data, response.layout);
-        });
+        Plotly.newPlot('firmas-espectrales-line-bar-chart', {{!firmas_espectrales}});
     </script>
   </body>
 </html>

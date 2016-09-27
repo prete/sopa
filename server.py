@@ -1,5 +1,6 @@
 from bottle import route, run, template, static_file, request
 import os
+import math
 import json
 
 views_path = os.path.join(os.getcwd(), 'views')
@@ -11,13 +12,28 @@ def go_to_index():
 
 @route('/upload', method='POST')
 def do_upload():
+    lambdas = request.forms.get('lambdas')
     upload = request.files.get('upload')
     name, ext = os.path.splitext(upload.filename)
     import sopa
     contenido = str(upload.file.read())
-    resultado = sopa.procesar(contenido)
-    return template('reporte.html', reportes=resultado.reportes)
-    
+    reportes = sopa.procesar(contenido, sopa.lambdasSensor('landsat8'))
+    firmas = []
+    for reporte in reportes:
+        firma = {}
+        firma['name'] = reporte.titulo
+        firma['x'] = reporte.lambdas
+        firma['y'] = [banda.media for banda in reporte.bandas]
+        firma['error_y'] = {}
+        firma['error_y']['type'] = 'data'
+        firma['error_y']['array'] = [math.sqrt(banda.varianza) for banda in reporte.bandas]
+        firma['error_y']['visible'] = True
+        firma['type'] = 'scatter'
+        firmas.append(firma)
+
+    firmas = json.dumps(firmas)
+    return template('reporte.html', reportes=reportes, firmas_espectrales=firmas)
+
 @route('/plotly')
 def go_to_plotly():
     trace1 = {}
@@ -29,35 +45,36 @@ def go_to_plotly():
     trace1['error_y']['array'] = [1, 2, 3]
     trace1['error_y']['visible'] = True
     trace1['type'] = 'scatter'
-    
+
     trace2 = {}
     trace1['name'] = 'serie 2'
     trace2['x'] = [0, 1, 2]
     trace2['y'] = [8, 5, 4]
     trace2['error_y'] = {'type': 'data', 'visible': True, 'array': [3, 2, 1]}
-    trace2['type'] = 'scatter'    
-    
-    layout = {}    
+    trace2['type'] = 'scatter'
+
+    layout = {}
     layout['xaxis'] = {'title': 'leyenda eje x'}
     layout['yaxis'] = {'title': 'leyenda eje y'}
     layout['margin'] = {'t': 20}
     layout['hovermode'] = 'closest'
-    
-    layout['showlegend'] = True  
-    legend = {}    
+
+    layout['showlegend'] = True
+    legend = {}
     legend['x'] = 100
     legend['y'] = 1
     legend['traceorder'] = 'normal'
     legend['font'] = {'family': 'sans-serif', 'size': 12, 'color': '#000'}
     legend['bgcolor'] = '#E2E2E2',
     legend['bordercolor'] = '#FFFFFF',
-    legend['borderwidth'] = 2  
+    legend['borderwidth'] = 2
     layout['legend'] = legend
-    
+
     return {'data':[trace1, trace2], 'layout':layout}
 
 @route('/static/<filename:path>')
 def send_static(filename):
     return static_file(filename, root=static_path)
+
 
 run(host='localhost', port=8000, debug=True, reloader=True)

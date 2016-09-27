@@ -13,6 +13,8 @@ class banda(object):
         self.minimo = 0.0
         self.maximo = 0.0
         self.histograma = {}
+    def __dict__(self):
+        return {'nombre':self.nombre,'media':self.media,'varianza':self.varianza,'minimo':self.minimo, 'maximo':self.maximo, 'histograma':self.histograma}
     def __str__(self):
         return 'Banda: {} - Media: {} - Varianza: {} - Minimo: {} - Maximo: {}'.format(self.nombre, self.media, self.varianza, self.minimo, self.maximo)
     def __repr__(self):
@@ -21,7 +23,7 @@ class banda(object):
 class banda_valor(object):
     def __init__(self, banda, valor):
         self.banda = banda
-        self.valor = valor        
+        self.valor = valor
     def __str__(self):
         return '{}={}'.format(self.banda, self.valor)
     def __repr__(self):
@@ -32,6 +34,7 @@ class matriz_bandas(object):
         self.matriz = matriz
         self.bandas = bandas
 
+'''
 class coleccion_reportes(object):
     def __init__(self, reportes):
         self.reportes = reportes
@@ -50,45 +53,31 @@ class coleccion_reportes(object):
         plt.xlim(min(longitudes_onda),max(longitudes_onda))
         plt.ylim(ymin, ymax)
         plt.show()
+'''
 
 class reporte(object):
     def __init__(self):
         self.titulo = ''
         self.bandas = []
         self.histogramas = []
+        self.lambdas = []
         self.matriz_correlacion = matriz_bandas(np.matrix([]),[])
         self.matriz_covarianza = matriz_bandas(np.matrix([]),[])
-    def medias(self):
-        return [b.media for b in self.bandas]        
-    def medias_segun_banda(self):
-        return [banda_valor(b.nombre, b.media) for b in self.bandas]
-    def varianzas_segun_banda(self):
-        return [banda_valor(b.nombre, b.varianza) for b in self.bandas]
-    def varianzas(self):
-        return [b.varianza for b in self.bandas]        
-    def minimos_segun_banda(self):
-        return [banda_valor(b.nombre, b.minimo) for b in self.bandas]
-    def minimos(self):
-        return [b.minimo for b in self.bandas]
-    def maximos_segun_banda(self):
-        return [banda_valor(b.nombre, b.maximo) for b in self.bandas]
-    def maximos(self):
-        return [b.maximo for b in self.bandas]
+    def __dict__(self):
+        return {'titulo':self.titulo, 'bandas':[b.__dict__() for b in self.bandas], 'histogramas':self.histogramas}
     def color(self):
         import hashlib
         hexcolor = hashlib.md5(self.titulo.encode('ascii')).hexdigest()
         return '#'+hexcolor[8:10]+hexcolor[18:20]+hexcolor[28:30]
-        #colors = ['#1b9e77','#d95f02','#7570b3','#e7298a','#66a61e','#e6ab02']
-        #return colors[hash(self.titulo)%6]
 
-def procesar(contenido):
+def procesar(contenido, longitudes_onda):
     reportes_resultado = []
     html = contenido.replace('\n', '').replace('<html>','').split('</html>')
     html = [bloque for bloque in html if len(bloque)!=0]
     if html is None or len(html)==0:
         print('No se pudo cargar el reporte.')
         return
-    
+
     for sub_html in html :
         element = etree.fromstring('<html>'+sub_html+'</html>')
         titulo = element.xpath('.//em[text()="Resultado"]/preceding::h1/font')
@@ -100,13 +89,14 @@ def procesar(contenido):
 
         resultados = element.xpath('.//em[text()="Resultado"]/ancestor::font/table/tr')
         for resultado in resultados:
+            repo.lambdas = longitudes_onda
             repo.bandas = parse_parametros_basicos(resultado)
             repo.matriz_correlacion = parse_matriz_correlacion(resultado)
-            repo.matriz_covarianza = parse_matriz_covarianza(resultado)            
-            repo.histogramas = parse_histogramas(resultado)        
+            repo.matriz_covarianza = parse_matriz_covarianza(resultado)
+            repo.histogramas = parse_histogramas(resultado)
         reportes_resultado.append(repo)
-    return coleccion_reportes(reportes_resultado)
-    
+    return reportes_resultado
+
 #Parametros basicos
 def parse_parametros_basicos(resultado):
     bandas = {}
@@ -171,23 +161,41 @@ def parse_histogramas(resultado):
                 for fila in histograma[1:]:
                     histogramas_resultado[banda][float(fila[0].text)] = float(fila[1].text)
     return sorted(histogramas_resultado)
-	
+
 def usage():
    print("SOPA - SoPI Parser")
    print("Herramientas de Python3 para el procesamiento de reportes de SoPI")
    print("")
    print("uso: sopa.py -r reporte-htm -s landsat8")
    print("")
-   print("		-s/--sensor:	especifica qué sensor se utilizó para generar el reporte.")
-   print("						ejemplo: sopa.py -r reporte.htm -s landsat8")
-   print("		-l/--lambdas:	especifica las longitudes de onda de las bandas del sensor.")
-   print("						ejemplo: sopa.py -r reporte.html -l landsat8 482,561,655,864,1608,2200")
+   print("      -s/--sensor:    especifica qué sensor se utilizó para generar el reporte.")
+   print("                      ejemplo: sopa.py -r reporte.htm -s landsat8")
+   print("      -l/--lambdas:   especifica las longitudes de onda de las bandas del sensor.")
+   print("                      ejemplo: sopa.py -r reporte.html -l landsat8 482,561,655,864,1608,2200")
    print("")
-	
+
 def lambdasSensor(sensor):
    lambdas = {"landsat8": [482, 561, 655, 864, 1608, 2200], "spot5": [545, 645, 840, 1665]}
    return lambdas[sensor]
-	
+   
+def plot_medias(reportes, xlabel, ylabel, title):
+    ymin = 10000000
+    ymax = 0
+    for r in reportes:
+        medias = r.medias()
+        xmin = min([min(r.lambdas),xmin])
+        xmax = max([max(r.lambdas),xmax])
+        ymin = min([min(medias),ymin])
+        ymax = max([max(medias),ymax])
+        plt.plot(r.lambdas, medias, linestyle = "-",color=r.color(), marker = "o", label=r.titulo)
+    plt.legend(bbox_to_anchor=(1.1, 1), loc=2)
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.xlim(xmin, xmax)
+    plt.ylim(ymin, ymax)
+    plt.show()
+
 if __name__ == "__main__":
    if not len(sys.argv[1:]):
       usage()
@@ -206,22 +214,22 @@ if __name__ == "__main__":
       if o in ("-h","--help"):
           usage()
           exit(0)
-      
-	  #Verifico que la ruta del archivo del reporte sea válida
+
+      #Verifico que la ruta del archivo del reporte sea válida
       elif o in ("-r","--reporte"):
          ruta_reporte = a
-         try:	  
+         try:
             if not os.path.isfile(ruta_reporte):
                print('No se pudo cargar el reporte. Verifique la ruta del archivo.')
                exit(0)
          except NameError:
             print('No se especificó la ruta del reporte.')
             exit(0)
-		 
+
       #Si se especificó el sensor, busco las longitudes de onda para sus bandas.
       elif o in ("-s","--sensor"):
          sensor = a
-         try:	  
+         try:
             print('Procesando para sensor: ', sensor)
             lambdas = lambdasSensor(sensor)
          except NameError:
@@ -229,10 +237,10 @@ if __name__ == "__main__":
             print('Ejemplo para Landsat 8: landsat8')
             exit(0)
          except KeyError:
-            print('El sensor ' , sensor , ' no existe en la base de datos. Pruebe especificar los lamdas manualmente con la opción -l/--lambdas') 
+            print('El sensor ' , sensor , ' no existe en la base de datos. Pruebe especificar los lamdas manualmente con la opción -l/--lambdas')
             print('Ejemplo para Landsat 8: landsat8')
             exit(0)
-			
+
       #Si se especificaron las longitudes de onda manualmente
       elif o in ("-l","--lambdas"):
          lambdas = a
@@ -246,15 +254,15 @@ if __name__ == "__main__":
             print('Formato incorrecto de longitudes de onda.')
             print('Ejemplo para landsat8: 482,561,655,864,1608,2200')
             exit(0)
-			
-	  #Si se especificaron las bandas a procesar
+
+      #Si se especificaron las bandas a procesar
       elif o in ("-b","--bandas"):
          bandas = a
-		
+
       else:
           assert False,"Unhandled Option"
-   
+
    with open(ruta_reporte) as archivo:
       contenido = archivo.read()
-      reportes = procesar(contenido)
-      reportes.plot_medias(lambdas, "Longitud de londa [nm]", "Relectancia [Arb.]", "Firmas espectrales")
+      reportes = procesar(contenido, lambdas)
+      plot_medias(reportes, "Longitud de londa [nm]", "Relectancia [Arb.]", "Firmas espectrales")
