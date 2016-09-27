@@ -2,6 +2,7 @@ from bottle import route, run, template, static_file, request
 import os
 import math
 import json
+import sopa
 
 views_path = os.path.join(os.getcwd(), 'views')
 static_path = os.path.join(os.getcwd(), 'static')
@@ -10,14 +11,7 @@ static_path = os.path.join(os.getcwd(), 'static')
 def go_to_index():
     return template('index.html', lookup=views_path)
 
-@route('/upload', method='POST')
-def do_upload():
-    lambdas = request.forms.get('lambdas')
-    upload = request.files.get('upload')
-    name, ext = os.path.splitext(upload.filename)
-    import sopa
-    contenido = str(upload.file.read())
-    reportes = sopa.procesar(contenido, sopa.lambdasSensor('landsat8'))
+def get_firmas_espectrales(reportes):
     firmas = []
     for reporte in reportes:
         firma = {}
@@ -30,51 +24,34 @@ def do_upload():
         firma['error_y']['visible'] = True
         firma['type'] = 'scatter'
         firmas.append(firma)
+    return firmas
 
-    firmas = json.dumps(firmas)
-    return template('reporte.html', reportes=reportes, firmas_espectrales=firmas)
+def get_histogramas(reportes):
+    histogramas = []
+    for reporte in reportes:
+        for banda in sorted(reporte.histogramas):
+          histo = {}
+          histo['x'] = [x for x,y in reporte.histogramas[banda]]
+          histo['y'] = [y for x,y in reporte.histogramas[banda]]          
+          histo['name'] = banda
+          histo['type'] = 'histogram'
+          histo['opacity'] = 0.75 
+          histogramas.append(histo)
+    return histogramas
 
-@route('/plotly')
-def go_to_plotly():
-    trace1 = {}
-    trace1['name'] = 'serie 1'
-    trace1['x'] = [0, 1, 2]
-    trace1['y'] = [6, 10, 2]
-    trace1['error_y'] = {}
-    trace1['error_y']['type'] = 'data'
-    trace1['error_y']['array'] = [1, 2, 3]
-    trace1['error_y']['visible'] = True
-    trace1['type'] = 'scatter'
-
-    trace2 = {}
-    trace1['name'] = 'serie 2'
-    trace2['x'] = [0, 1, 2]
-    trace2['y'] = [8, 5, 4]
-    trace2['error_y'] = {'type': 'data', 'visible': True, 'array': [3, 2, 1]}
-    trace2['type'] = 'scatter'
-
-    layout = {}
-    layout['xaxis'] = {'title': 'leyenda eje x'}
-    layout['yaxis'] = {'title': 'leyenda eje y'}
-    layout['margin'] = {'t': 20}
-    layout['hovermode'] = 'closest'
-
-    layout['showlegend'] = True
-    legend = {}
-    legend['x'] = 100
-    legend['y'] = 1
-    legend['traceorder'] = 'normal'
-    legend['font'] = {'family': 'sans-serif', 'size': 12, 'color': '#000'}
-    legend['bgcolor'] = '#E2E2E2',
-    legend['bordercolor'] = '#FFFFFF',
-    legend['borderwidth'] = 2
-    layout['legend'] = legend
-
-    return {'data':[trace1, trace2], 'layout':layout}
+@route('/upload', method='POST')
+def do_upload():
+    lambdas = request.forms.get('lambdas')
+    upload = request.files.get('upload')
+    name, ext = os.path.splitext(upload.filename)
+    contenido = str(upload.file.read())    
+    reportes = sopa.procesar(contenido, sopa.lambdas_sensor('landsat8'))
+    firmas = get_firmas_espectrales(reportes)
+    histos = get_histogramas(reportes)
+    return template('reporte.html', reportes=reportes, firmas_espectrales=json.dumps(firmas), histogramas=json.dumps(histos))
 
 @route('/static/<filename:path>')
 def send_static(filename):
     return static_file(filename, root=static_path)
-
 
 run(host='localhost', port=8000, debug=True, reloader=True)

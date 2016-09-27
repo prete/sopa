@@ -7,6 +7,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
     <title>Reporte | SOPA - SoPI Parser</title>
+    <link href="/statoc/favicon.ico" rel="shortcut icon" type="image/vnd.microsoft.icon" />
     <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/style.css" rel="stylesheet">
   </head>
@@ -37,10 +38,58 @@
     
     <div class="container">      
 	   <div class="row">
-            <div class="col-md-12">
-                <h1>Firmas Espectrales</h1>
-                <div id="firmas-espectrales-line-bar-chart"></div>
-            </div>   
+        <div class="col-md-12">
+            <h1>Firmas Espectrales</h1>
+            <div id="firmas-espectrales-line-bar-chart"></div>
+            <a href="#" onclick="return false;" data-toggle="collapse" data-target="#datos-firmas-espectrales" class="btn btn-block btn-info">ver datos</a>
+            <div id="datos-firmas-espectrales" class="collapse">
+              <table class="table table-striped table-hover table-bordered table-condensed">                  
+                  % import math
+                  % for i,r in enumerate(reportes):
+                     <tr><th class="text-center"><a href="#" onclick="return false;" data-toggle="collapse" data-target="#datos-firma-espectral-{{i}}" class="btn btn-block btn-default">{{r.titulo}}</a></th></tr>
+                     <tr id="datos-firma-espectral-{{i}}" class="collapse">
+                       <td>
+                         <table class="table">
+                            <tr><th>Banda</th><th>Media (x&#772;)</th><th>Desviación estándar (&sigma;) </th><th>Varianza (&sigma;<sup>2</sup>)</th></tr>
+                            % for b in r.bandas:
+                            <tr><td>{{b.nombre}}</td><td>{{b.media}}</td><td>{{math.sqrt(b.varianza)}}</td><td>{{b.varianza}}</td></tr>
+                            % end                    
+                         </table>
+                       </td>
+                     </tr>                   
+                  % end
+              </table>
+            </div>
+        </div>
+      </div>
+      <!--/.row-->
+      
+      <div class="row">
+        <div class="col-md-12">
+          <h1>Histogramas</h1>
+          <div id="bandas-histogram-char"></div>
+          <a href="#" onclick="return false;" data-toggle="collapse" data-target="#datos-histogramas" class="btn btn-block btn-info">ver datos</a>
+            <div id="datos-histogramas" class="collapse">
+              <table class="table table-striped table-hover table-bordered table-condensed">
+                  % import math
+                  % for r in reportes:
+                    % for i,h in enumerate(sorted(r.histogramas)):
+                     <tr><th class="text-center"><a href="#" onclick="return false;" data-toggle="collapse" data-target="#datos-histograma-{{i}}" class="btn btn-block btn-default">{{h}}</a></th></tr>
+                     <tr id="datos-histograma-{{i}}" class="collapse">
+                       <td>
+                        <table class="table">
+                            <tr><th>Valor</th><th>Frecuencia</th></tr>
+                            %for valor,frecuencia in r.histogramas[h]:
+                              <tr><td>{{valor}}</td><td>{{frecuencia}}</td></tr>
+                            % end
+                          </table>
+                        </td>
+                      </tr>
+                    % end                    
+                  % end
+              </table>
+            </div>
+        </div>   
        </div>
       <!--/.row-->
     </div>
@@ -50,7 +99,11 @@
     <script src="/static/bootstrap/js/bootstrap.min.js"></script>
     <script src="/static/plotly/js/plotly.min.js"></script>
     <script>
-        Plotly.newPlot('firmas-espectrales-line-bar-chart', {{!firmas_espectrales}});
+        var legenda_firmas_espectrales = {title: "Firmas Especrales", xaxis: {title: "Longitud de londa [nm]"}, yaxis: {title: "Relectancia ρ [Arb.]"}};
+        Plotly.newPlot('firmas-espectrales-line-bar-chart', {{!firmas_espectrales}}, legenda_firmas_espectrales);
+        
+        var legenda_histograma = {bargap: 0.05, bargroupgap: 0.2, barmode: "overlay", title: "Histograma", xaxis: {title: "Valor"}, yaxis: {title: "Frecuencia"}};
+        Plotly.newPlot('bandas-histogram-char', {{!histogramas}}, legenda_histograma);
     </script>
   </body>
 </html>

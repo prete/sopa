@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import os.path
 import getopt
 import sys
+import hashlib
 
 class banda(object):
     def __init__(self):
@@ -13,8 +14,6 @@ class banda(object):
         self.minimo = 0.0
         self.maximo = 0.0
         self.histograma = {}
-    def __dict__(self):
-        return {'nombre':self.nombre,'media':self.media,'varianza':self.varianza,'minimo':self.minimo, 'maximo':self.maximo, 'histograma':self.histograma}
     def __str__(self):
         return 'Banda: {} - Media: {} - Varianza: {} - Minimo: {} - Maximo: {}'.format(self.nombre, self.media, self.varianza, self.minimo, self.maximo)
     def __repr__(self):
@@ -54,6 +53,9 @@ class coleccion_reportes(object):
         plt.ylim(ymin, ymax)
         plt.show()
 '''
+def color_hash(txt):    
+    hexcolor = hashlib.md5(txt.encode('ascii')).hexdigest()
+    return '#'+hexcolor[8:10]+hexcolor[18:19]+hexcolor[27:30]
 
 class reporte(object):
     def __init__(self):
@@ -63,17 +65,13 @@ class reporte(object):
         self.lambdas = []
         self.matriz_correlacion = matriz_bandas(np.matrix([]),[])
         self.matriz_covarianza = matriz_bandas(np.matrix([]),[])
-    def __dict__(self):
-        return {'titulo':self.titulo, 'bandas':[b.__dict__() for b in self.bandas], 'histogramas':self.histogramas}
     def color(self):
-        import hashlib
-        hexcolor = hashlib.md5(self.titulo.encode('ascii')).hexdigest()
-        return '#'+hexcolor[8:10]+hexcolor[18:20]+hexcolor[28:30]
+        return color_hash(self.titulo)
 
 def procesar(contenido, longitudes_onda):
     reportes_resultado = []
-    html = contenido.replace('\n', '').replace('<html>','').split('</html>')
-    html = [bloque for bloque in html if len(bloque)!=0]
+    html = contenido.replace('\n', '').replace('<html>','').split('</html>')    
+    html = [bloque for bloque in html if len(bloque)>1]
     if html is None or len(html)==0:
         print('No se pudo cargar el reporte.')
         return
@@ -91,8 +89,8 @@ def procesar(contenido, longitudes_onda):
         for resultado in resultados:
             repo.lambdas = longitudes_onda
             repo.bandas = parse_parametros_basicos(resultado)
-            repo.matriz_correlacion = parse_matriz_correlacion(resultado)
-            repo.matriz_covarianza = parse_matriz_covarianza(resultado)
+            #repo.matriz_correlacion = parse_matriz_correlacion(resultado)
+            #repo.matriz_covarianza = parse_matriz_covarianza(resultado)
             repo.histogramas = parse_histogramas(resultado)
         reportes_resultado.append(repo)
     return reportes_resultado
@@ -153,29 +151,19 @@ def parse_histogramas(resultado):
     histogramas = resultado.xpath('.//font[text()="Histogramas"]/ancestor::h1/following-sibling::table/tr/td')
     if len(histogramas)!=0:
         for histograma in histogramas:
-            banda = histograma.xpath('.//table/tr/td/table/tr/td/h1/font/text()')[0]
+            banda = histograma.xpath('.//table/tr/td/table/tr/td/h1/font')[0].text
             histogramas_resultado[banda] = {}
             histograma = histograma.xpath('./table/tr/td/table/tr/td/table')
             if len(histograma)!=0:
                 histograma = histograma[0]
-                for fila in histograma[1:]:
-                    histogramas_resultado[banda][float(fila[0].text)] = float(fila[1].text)
-    return sorted(histogramas_resultado)
+                histogramas_resultado[banda] = [(float(fila[0].text), float(fila[1].text)) for fila in histograma[1:]]
+    return histogramas_resultado
 
-def usage():
-   print("SOPA - SoPI Parser")
-   print("Herramientas de Python3 para el procesamiento de reportes de SoPI")
-   print("")
-   print("uso: sopa.py -r reporte-htm -s landsat8")
-   print("")
-   print("      -s/--sensor:    especifica qué sensor se utilizó para generar el reporte.")
-   print("                      ejemplo: sopa.py -r reporte.htm -s landsat8")
-   print("      -l/--lambdas:   especifica las longitudes de onda de las bandas del sensor.")
-   print("                      ejemplo: sopa.py -r reporte.html -l landsat8 482,561,655,864,1608,2200")
-   print("")
-
-def lambdasSensor(sensor):
-   lambdas = {"landsat8": [482, 561, 655, 864, 1608, 2200], "spot5": [545, 645, 840, 1665]}
+#Longitud de onda de las bandas que capta el sensor
+def lambdas_sensor(sensor):
+   lambdas = {}   
+   lambdas["landsat8"] = [482, 562, 655, 865, 1610, 2200]   
+   lambdas["spot5"] = [545, 645, 840, 1665]
    return lambdas[sensor]
    
 def plot_medias(reportes, xlabel, ylabel, title):
@@ -196,6 +184,21 @@ def plot_medias(reportes, xlabel, ylabel, title):
     plt.ylim(ymin, ymax)
     plt.show()
 
+############################################################################### 
+
+def usage():
+   print("SOPA - SoPI Parser")
+   print("Herramientas de Python3 para el procesamiento de reportes de SoPI")
+   print("")
+   print("uso: sopa.py -r reporte-htm -s landsat8")
+   print("")
+   print("      -s/--sensor:    especifica qué sensor se utilizó para generar el reporte.")
+   print("                      ejemplo: sopa.py -r reporte.htm -s landsat8")
+   print("      -l/--lambdas:   especifica las longitudes de onda de las bandas del sensor.")
+   print("                      ejemplo: sopa.py -r reporte.html -l landsat8 482,561,655,864,1608,2200")
+   print("")
+
+#punto de entrada de la linea de comandos
 if __name__ == "__main__":
    if not len(sys.argv[1:]):
       usage()
@@ -231,7 +234,7 @@ if __name__ == "__main__":
          sensor = a
          try:
             print('Procesando para sensor: ', sensor)
-            lambdas = lambdasSensor(sensor)
+            lambdas = lambdas_sensor(sensor)
          except NameError:
             print('No se especificó el sensor.')
             print('Ejemplo para Landsat 8: landsat8')
