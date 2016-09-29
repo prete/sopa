@@ -63,6 +63,7 @@ class reporte(object):
         self.bandas = []
         self.histogramas = []
         self.lambdas = []
+        self.autovalores = {}
         self.matriz_correlacion = matriz_bandas(np.matrix([]),[])
         self.matriz_covarianza = matriz_bandas(np.matrix([]),[])
     def color(self):
@@ -89,6 +90,8 @@ def procesar(contenido, longitudes_onda):
         for resultado in resultados:
             repo.lambdas = longitudes_onda
             repo.bandas = parse_parametros_basicos(resultado)
+            repo.autovalores = parse_autovalores(resultado)
+            print(repo.autovalores)
             #repo.matriz_correlacion = parse_matriz_correlacion(resultado)
             #repo.matriz_covarianza = parse_matriz_covarianza(resultado)
             repo.histogramas = parse_histogramas(resultado)
@@ -158,6 +161,16 @@ def parse_histogramas(resultado):
                 histograma = histograma[0]
                 histogramas_resultado[banda] = [(float(fila[0].text), float(fila[1].text)) for fila in histograma[1:]]
     return histogramas_resultado
+
+#Autovalores
+def parse_autovalores(resultado):
+    autovalores_resultado = {}
+    autovalores = resultado.xpath('.//font[contains(., "Autovalores")]/ancestor::tr/following-sibling::*/td/table')
+    if len(autovalores)!=0:
+        autovalores = autovalores[0]
+        for i in range(1,len(autovalores[0])):
+            autovalores_resultado[autovalores[0][i].text] = float(autovalores[1][i].text)    
+    return autovalores_resultado
 
 #Longitud de onda de las bandas que capta el sensor
 def lambdas_sensor(sensor):
@@ -268,4 +281,4 @@ if __name__ == "__main__":
    with open(ruta_reporte) as archivo:
       contenido = archivo.read()
       reportes = procesar(contenido, lambdas)
-      plot_medias(reportes, "Longitud de londa [nm]", "Relectancia [Arb.]", "Firmas espectrales")
+      #plot_medias(reportes, "Longitud de londa [nm]", "Relectancia [Arb.]", "Firmas espectrales")

@@ -67,7 +67,7 @@
       <div class="row">
         <div class="col-md-12">
           <h1>Histogramas</h1>
-          <div id="bandas-histogram-char"></div>
+          <div id="bandas-histogram-chart"></div>
           <a href="#" onclick="return false;" data-toggle="collapse" data-target="#datos-histogramas" class="btn btn-block btn-info">ver datos</a>
             <div id="datos-histogramas" class="collapse">
               <table class="table table-striped table-hover table-bordered table-condensed">
@@ -92,6 +92,33 @@
         </div>   
        </div>
       <!--/.row-->
+
+      <div class="row">
+        <div class="col-md-12">
+          <h1>Autovalores</h1>
+          <div class="row">
+            <div class="col-md-6">
+              <div id="autovalores-chart"></div>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-striped table-hover table-bordered table-condensed">
+                    <tr><th>Componente</th><th>Autovalor</th><th>% influencia</th><th>% acumulado</th></tr>
+                    % import math
+                    % acumulado_influencia = 0
+                    % for r in reportes:
+                      % for a in sorted(r.autovalores):
+                        % acumulado_influencia += (r.autovalores[a]/len(r.autovalores)) * 100                      
+                        <tr><td>{{a}}</td><td>{{r.autovalores[a]}}</td><td>{{"{0:.02f}%".format( (r.autovalores[a]/len(r.autovalores)) *100 )}}</td><td>{{"{0:.02f}%".format(acumulado_influencia)}}</td></tr>
+                      % end
+                    % end
+                </table>
+            </div>
+        </div>   
+       </div>
+      <!--/.row-->
+
+
+
     </div>
    <!-- /.container -->
 
@@ -99,11 +126,14 @@
     <script src="/static/bootstrap/js/bootstrap.min.js"></script>
     <script src="/static/plotly/js/plotly.min.js"></script>
     <script>
-        var legenda_firmas_espectrales = {title: "Firmas Especrales", xaxis: {title: "Longitud de londa [nm]"}, yaxis: {title: "Relectancia ρ [Arb.]"}};
-        Plotly.newPlot('firmas-espectrales-line-bar-chart', {{!firmas_espectrales}}, legenda_firmas_espectrales);
+        var leyenda_firmas_espectrales = {title: "Firmas Especrales", xaxis: {title: "Longitud de londa [nm]"}, yaxis: {title: "Relectancia ρ [Arb.]"}};
+        Plotly.newPlot('firmas-espectrales-line-bar-chart', {{!firmas_espectrales}}, leyenda_firmas_espectrales);
         
-        var legenda_histograma = {bargap: 0.05, bargroupgap: 0.2, barmode: "overlay", title: "Histograma", xaxis: {title: "Valor"}, yaxis: {title: "Frecuencia"}};
-        Plotly.newPlot('bandas-histogram-char', {{!histogramas}}, legenda_histograma);
+        var leyenda_histograma = {bargap: 0.05, bargroupgap: 0.2, barmode: "overlay", title: "Histograma", xaxis: {title: "Valor"}, yaxis: {title: "Frecuencia"}};
+        Plotly.newPlot('bandas-histogram-chart', {{!histogramas}}, leyenda_histograma);
+
+        var leyenda_autovalores = {title: "Autovalores"};
+        Plotly.newPlot('autovalores-chart', {{!autovalores}}, leyenda_autovalores);
     </script>
   </body>
 </html>

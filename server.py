@@ -39,6 +39,19 @@ def get_histogramas(reportes):
           histogramas.append(histo)
     return histogramas
 
+def get_autovalores(reportes):
+    autovalores = []
+    for reporte in reportes:   
+        if len(reporte.autovalores)!=0:
+            values = []
+            labels = []
+            for a in sorted(reporte.autovalores):
+                values.append(reporte.autovalores[a])
+                labels.append(a) 
+            autovalor = {'values': values, 'labels': labels, 'type': 'pie'}
+            autovalores.append(autovalor)
+    return autovalores
+
 @route('/upload', method='POST')
 def do_upload():
     lambdas = request.forms.get('lambdas')
@@ -48,7 +61,8 @@ def do_upload():
     reportes = sopa.procesar(contenido, sopa.lambdas_sensor('landsat8'))
     firmas = get_firmas_espectrales(reportes)
     histos = get_histogramas(reportes)
-    return template('reporte.html', reportes=reportes, firmas_espectrales=json.dumps(firmas), histogramas=json.dumps(histos))
+    aval = get_autovalores(reportes)
+    return template('reporte.html', reportes=reportes, firmas_espectrales=json.dumps(firmas), histogramas=json.dumps(histos), autovalores = json.dumps(aval))
 
 @route('/static/<filename:path>')
 def send_static(filename):
